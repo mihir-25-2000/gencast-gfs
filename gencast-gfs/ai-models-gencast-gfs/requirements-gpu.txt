@@ -1,0 +1,3 @@
+# Add GenCast GPU dependencies here, for example:
+# jax[cuda12_pip]
+# flax
