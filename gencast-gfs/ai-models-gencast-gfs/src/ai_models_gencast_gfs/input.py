@@ -106,61 +106,26 @@ def create_training_xarray(
 
         # Ensure SST exists even if the input source does not provide it
         if CF_NAME_SFC["sst"] not in data_vars:
-            sst_path = os.getenv("SST_INJECTION_PATH")
-            sst_date = os.getenv("SST_INJECTION_DATE")
-
-            if sst_path:
-                LOG.info("Injecting sea surface temperature from %s", sst_path)
-                try:
-                    sst_ds = xr.load_dataset(sst_path)
-                    if "sea_surface_temperature" in sst_ds:
-                        sst_da = sst_ds["sea_surface_temperature"]
-                    elif "sst" in sst_ds:
-                        sst_da = sst_ds["sst"]
-                    else:
-                        raise KeyError("No 'sea_surface_temperature' or 'sst' variable found")
-
-                    if "time" in sst_da.dims:
-                        if sst_date:
-                            target_time = np.datetime64(datetime.datetime.strptime(sst_date, "%Y%m%d"))
-                        else:
-                            target_time = np.datetime64(start_date)
-                        sst_da = sst_da.sel(time=target_time, method="nearest")
-
-                    units = str(sst_da.attrs.get("units", "")).lower()
-                    if units in ("c", "celsius", "degc", "degree_celsius", "degrees_celsius"):
-                        sst_da = sst_da + 273.15
-
-                    sst_da = sst_da.astype(np.float32)
-
-                    # Regrid/interpolate to the GFS surface grid
-                    target_lat = np.array(lat)
-                    target_lon = np.array(lon)
-                    sst_da = sst_da.sortby("lat").sortby("lon")
-                    sst_da = sst_da.interp(
-                        lat=np.sort(target_lat),
-                        lon=target_lon,
-                        kwargs={"fill_value": "extrapolate"},
-                    )
-                    sst_da = sst_da.reindex(lat=target_lat)
-
-                    sst_data = np.broadcast_to(
-                        sst_da.values.reshape(1, 1, len(lat), len(lon)),
-                        (1, len(all_datetimes), len(lat), len(lon)),
-                    )
-
-                    data_vars[CF_NAME_SFC["sst"]] = (
-                        ["batch", "time", "lat", "lon"],
-                        sst_data,
-                    )
-                except Exception:  # pragma: no cover - defensive
-                    LOG.warning("Failed to inject SST from %s; falling back to zeros", sst_path, exc_info=True)
-
-            if CF_NAME_SFC["sst"] not in data_vars:
-                LOG.warning("Sea surface temperature missing in inputs; filling with zeros")
+            t2m_key = CF_NAME_SFC["2t"]
+            if t2m_key not in data_vars:
+                LOG.warning("Sea surface temperature missing and 2m_temperature unavailable; filling with zeros")
                 data_vars[CF_NAME_SFC["sst"]] = (
                     ["batch", "time", "lat", "lon"],
                     np.zeros((1, len(all_datetimes), len(lat), len(lon)), dtype=np.float32),
+                )
+            else:
+                LOG.info("Filling sea surface temperature from 2m_temperature and zeroing over land")
+                sst_data = np.array(data_vars[t2m_key][1], copy=True)
+
+                lsm_key = CF_NAME_SFC["lsm"]
+                lsm = data_vars.get(lsm_key)
+                if lsm is not None:
+                    land_mask = np.array(lsm[1], copy=False) >= 0.5
+                    sst_data = np.where(land_mask[None, None, :, :], 0.0, sst_data)
+
+                data_vars[CF_NAME_SFC["sst"]] = (
+                    ["batch", "time", "lat", "lon"],
+                    sst_data,
                 )
 
         for param, fields in pl.items():
