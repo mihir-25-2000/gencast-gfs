@@ -1,0 +1,28 @@
+##### GenCast-GFS Pipeline #######
+
+Submit a job ggs.sh (ggs-june.sh for a month of run). 
+
+Sets environment, assets and output directories paths, init date and time.
+
+The chronological order of files being called with their paths: 
+
+base.py      ------    /home/mihir.more/.conda/envs/gencast-gfs/lib/python3.1/site-packages/ai_models_gfs/inputs   (checked from error log)
+
+__main__.py  ------    /home/mihir.more/.conda/envs/gencast-gfs/lib/python3.1/site-packages/ai_models_gfs
+
+model.py     ------    /home/mihir.more/.conda/envs/gencast-gfs/lib/python3.1/site-packages/ai_models_gfs
+
+gfs.py       ------    /home/mihir.more/.conda/envs/gencast-gfs/lib/python3.1/site-packages/ai_models_gfs/inputs    (downloads gfs data to /tmp/ai-models-gfs, formats downloaded grib files as well --  )
+
+model.py     ------    /home/mihir.more/myenv/gencast-gfs/ai-models-gencast-gfs/src/ai_models_gencast_gfs
+
+input.py     ------    /home/mihir.more/myenv/gencast-gfs/ai-models-gencast-gfs/src/ai_models_gencast_gfs   (Check error logs)
+
+output.py    ------    /home/mihir.more/myenv/gencast-gfs/ai-models-gencast-gfs/src/ai_models_gencast_gfs
+
+
+
+
+
+
+
